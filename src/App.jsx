@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import './App.css';
 import { 
   Package, Mail, Lock, ArrowRight, Boxes, TrendingUp, Shield, 
   Home, PackageOpen, Truck, ClipboardList, History, Settings, 
@@ -13,38 +14,31 @@ import {
 // API SERVICE LAYER - Backend Integration Ready
 // ============================================
 // TODO: Replace mock responses with actual fetch calls to your backend
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const apiService = {
   // Auth endpoints
   login: async (email, password) => {
-    // TODO: Uncomment and configure when backend is ready
-    // const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, password })
-    // });
-    // if (!response.ok) throw new Error('Login failed');
-    // return response.json();
-    
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({ 
-        success: true, 
-        user: { id: 1, email, name: 'Admin User', role: 'admin' },
-        token: 'mock-jwt-token'
-      }), 1000);
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
     });
+    if (!response.ok) throw new Error('Login failed');
+    return response.json();
   },
 
-  signup: async (userData) => {
-    // TODO: Replace with actual backend call
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({ 
-        success: true, 
-        user: { id: 1, ...userData },
-        token: 'mock-jwt-token'
-      }), 1000);
+  register: async (username, email, password, role) => {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password, role })
     });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Registration failed');
+    }
+    return response.json();
   },
 
   sendPasswordResetOTP: async (email) => {
@@ -61,45 +55,64 @@ const apiService = {
 
   // Product endpoints
   getProducts: async (filters = {}) => {
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(filters);
-    // const response = await fetch(`${API_BASE_URL}/products?${queryParams}`, {
-    //   headers: { 'Authorization': `Bearer ${token}` }
-    // });
-    // return response.json();
+    const token = localStorage.getItem('token'); // Retrieve token from localStorage
+    if (!token) throw new Error('No authentication token found');
     
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({
-        success: true,
-        data: [
-          { id: 1, name: 'Steel Rods', sku: 'SR-001', category_id: 1, category: 'Raw Materials', stock: 450, unit: 'kg', warehouse_id: 1, warehouse_name: 'Warehouse A', reorder_level: 100 },
-          { id: 2, name: 'Office Chairs', sku: 'OC-102', category_id: 2, category: 'Furniture', stock: 23, unit: 'pcs', warehouse_id: 2, warehouse_name: 'Warehouse B', reorder_level: 50 },
-          { id: 3, name: 'Laptops', sku: 'LP-205', category_id: 3, category: 'Electronics', stock: 0, unit: 'pcs', warehouse_id: 1, warehouse_name: 'Warehouse A', reorder_level: 10 },
-        ]
-      }), 800);
+    const queryParams = new URLSearchParams(filters);
+    const response = await fetch(`${API_BASE_URL}/products?${queryParams}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (!response.ok) throw new Error('Failed to fetch products');
+    return response.json();
+  },
+
+  getProductById: async (id) => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+    
+    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch product');
+    return response.json();
   },
 
   createProduct: async (productData) => {
-    // TODO: Replace with actual API call
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({ 
-        success: true, 
-        data: { id: Date.now(), ...productData, created_at: new Date().toISOString() }
-      }), 800);
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+    
+    const response = await fetch(`${API_BASE_URL}/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(productData)
     });
+    if (!response.ok) throw new Error('Failed to create product');
+    return response.json();
   },
 
   updateProduct: async (id, productData) => {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({ success: true, data: { id, ...productData } }), 800);
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+    
+    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(productData)
     });
+    if (!response.ok) throw new Error('Failed to update product');
+    return response.json();
   },
 
   deleteProduct: async (id) => {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({ success: true }), 800);
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+    
+    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (!response.ok) throw new Error('Failed to delete product');
+    return response.json();
   },
 
   // Dashboard endpoints
@@ -752,10 +765,9 @@ export default function StockMasterApp() {
     try {
       const result = await apiService.login(email, password);
       if (result.success) {
+        localStorage.setItem('token', result.token); // Store token
         setCurrentUser(result.user);
         setIsAuthenticated(true);
-        // TODO: Store token in localStorage or state management
-        // localStorage.setItem('token', result.token);
       } else {
         alert('Login failed');
       }
@@ -774,7 +786,7 @@ export default function StockMasterApp() {
     
     setLoading(true);
     try {
-      const result = await apiService.signup({ name, email, password, phone, role });
+      const result = await apiService.register(name, email, password, 'user'); // Add default role
       if (result.success) {
         setCurrentUser(result.user);
         setIsAuthenticated(true);

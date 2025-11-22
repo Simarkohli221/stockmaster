@@ -14,6 +14,8 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/dashboard", require("./routes/dashboard.routes"));
+app.use("/api/categories", require("./routes/category.routes"));
 
 // DO NOT AUTHENTICATE HERE AGAIN
 // sequelize.authenticate() is already called inside db.js

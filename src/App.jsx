@@ -14,7 +14,7 @@ import {
 // API SERVICE LAYER - Backend Integration Ready
 // ============================================
 // TODO: Replace mock responses with actual fetch calls to your backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const apiService = {
   // Auth endpoints
@@ -157,18 +157,19 @@ const apiService = {
   },
 
   getCategories: async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve({
-        success: true,
-        data: [
-          { id: 1, name: 'Raw Materials' },
-          { id: 2, name: 'Furniture' },
-          { id: 3, name: 'Electronics' },
-          { id: 4, name: 'Office Supplies' },
-        ]
-      }), 500);
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error("No authentication token found");
+  
+    const response = await fetch(`${API_BASE_URL}/categories`, {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
-  },
+  
+    if (!response.ok) {
+      throw new Error("Failed to fetch categories");
+    }
+  
+    return response.json();
+  },  
 };
 
 // ============================================
